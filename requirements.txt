@@ -1,0 +1,19 @@
+# Python 依赖（python ≥ 3.10）：pip install -r requirements.txt
+# 由扫描 开发工具/ 下全部 .py 的 import 得出；其余 import 均为标准库。
+
+# 图像处理：img_tools.py、eye_composite.py、lens_readability.py、cjk_font.py、agy_mcp_server.js 的缩图等
+Pillow>=10.0
+numpy>=1.24
+
+# YAML：审查/perception（unity_yaml.py、decl_draft.py、pose_frames.py）、dsh_balance.py
+PyYAML>=6.0
+
+# 可选：审查/perception/decl_validate.py 的 JSON Schema 层；不装时 schema 层报 skipped，只跑语义层
+jsonschema>=4.0
+
+# 测试：开发工具/通用工具/tests（python3 -m pytest -q）
+pytest>=7.0
+
+# 不在此列、无需 pip 安装：
+#   bpy / mathutils / bmesh —— 只在 Blender 内置 Python 里运行的脚本用（bl_keydump.py、bl_keymeasure.py、
+#   bl_keyprobe.py、bl_tilt.py 等），用 `blender --background --python <脚本>` 调，别在系统 Python 里装。

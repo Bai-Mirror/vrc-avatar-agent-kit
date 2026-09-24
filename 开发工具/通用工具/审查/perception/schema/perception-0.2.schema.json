@@ -1,0 +1,3444 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "perception-0.2.schema.json",
+  "title": "感知机制 · 部件—依赖声明 schema v0.2",
+  "description": "声明（perception/0.2）与服装包片段（perception-fragment/0.2）的封闭 schema；按 schema 字段分派。设计来源 03a Q1-①，以 03 §3 更正清单与 03 §8（v3）为准；T-01（含 T-32 的 schema 部分）。改动记录见同目录 CHANGELOG.md。",
+  "$comment": "封闭约定：所有结构对象 additionalProperties:false；映射型字段（menu.slots/controls、body_axes、expect.values、expect_by_leader）用 propertyNames 约束键、additionalProperties 约束值。互斥字段按规范顺序单向写 {not:{}}，只在靠后的字段上报。条件表达式、姿势 id、往返序列的 EBNF，schema 表达不了的语义规则（SEM-01…24）、展开规则、反例头注释与报错路径约定见同目录 CONDITION_GRAMMAR.md。YAML 注意：on/off/yes/no 会被 YAML 1.1 解析成布尔、裸日期会成 date、1.06 会成浮点、裸 true 会成布尔——字符串一律加引号。",
+  "type": "object",
+  "required": [
+    "schema"
+  ],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "enum": [
+        "perception/0.2",
+        "perception-fragment/0.2"
+      ],
+      "description": "格式版本：perception/0.2（声明）或 perception-fragment/0.2（片段）。"
+    }
+  },
+  "if": {
+    "properties": {
+      "schema": {
+        "const": "perception-fragment/0.2"
+      }
+    },
+    "required": [
+      "schema"
+    ]
+  },
+  "then": {
+    "$ref": "#/$defs/fragmentRoot"
+  },
+  "else": {
+    "$ref": "#/$defs/declarationRoot"
+  },
+  "$defs": {
+    "declarationRoot": {
+      "type": "object",
+      "description": "部件—依赖声明 perception/0.2（每单一份，`<工程>/_感知/声明.yaml`）。",
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "perception/0.2",
+          "description": "格式版本，固定 perception/0.2。"
+        },
+        "avatar": {
+          "$ref": "#/$defs/avatar",
+          "description": "被声明的头像。"
+        },
+        "includes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/include"
+          },
+          "description": "引入的服装包声明片段（按顺序合并；同 id 时本文件内的定义覆盖片段）。"
+        },
+        "menu": {
+          "$ref": "#/$defs/menu",
+          "description": "菜单输入段（v0.2 起是声明的输入：生成器按它建参数与档位，T4 params.json 只对账，不再自动回填，03 §3）。片段里不许有。"
+        },
+        "body_axes": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/bodyAxis"
+          },
+          "description": "体型轴表：名字 → 定义；条件里 `body.<名> in <区间>` 引用。"
+        },
+        "geo_defaults": {
+          "$ref": "#/$defs/geoDefaults",
+          "description": "默认几何依赖生成开关；不写＝true。"
+        },
+        "poses": {
+          "$ref": "#/$defs/poses",
+          "description": "姿势检查设置（03 §8，T-32 并入 T-01）。不写＝全取缺省。姿势 id 与 tag 的命名见 CONDITION_GRAMMAR.md §3；与状态的组合与剪枝由 pose_plan（T-29）按 covers×moved_regions 算。"
+        },
+        "render": {
+          "$ref": "#/$defs/render",
+          "description": "渲染/抓屏设置（01 §8 抓屏、03 §4.1 U4）。"
+        },
+        "roundtrip_default": {
+          "$ref": "#/$defs/roundtripDefault",
+          "description": "全局往返序列（每条 dep 默认都跑，除非 dep.roundtrip 覆盖）。"
+        },
+        "parts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/part"
+          },
+          "description": "语义部件表（含片段引入的除外）。"
+        },
+        "deps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dep"
+          },
+          "description": "依赖表（D1–D8、R）。可为空（只靠 geo_defaults 与通用规则）。"
+        },
+        "waivers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/waiver"
+          },
+          "description": "豁免表。"
+        }
+      },
+      "required": [
+        "schema",
+        "avatar",
+        "menu",
+        "parts",
+        "deps"
+      ]
+    },
+    "fragmentRoot": {
+      "type": "object",
+      "description": "服装包声明片段 perception-fragment/0.2（`开发工具/素材包说明/<包>.decl.yaml`，按包×素体建，03 Q1★）。",
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "perception-fragment/0.2",
+          "description": "格式版本，固定 perception-fragment/0.2。"
+        },
+        "package": {
+          "type": "object",
+          "description": "服装包与适配素体。",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-]+$",
+              "description": "包名（与 素材包说明/ 下的文件名一致）。"
+            },
+            "body": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-]+$",
+              "description": "适配的素体名（与素体档案文件名一致，如 Kaguya）。"
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1,
+              "description": "包版本（字符串；YAML 里要加引号，否则 1.06 会变成浮点数）。"
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "description": "素材包来源（<客户素材目录>/ 下的路径或商店页）。"
+            },
+            "note": {
+              "$ref": "#/$defs/note",
+              "description": "自由备注，不参与校验。"
+            }
+          },
+          "required": [
+            "name",
+            "body"
+          ]
+        },
+        "parts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/fragmentPart"
+          },
+          "description": "片段内部件（局部 id；objects.path 相对 includes[].mount）。"
+        },
+        "deps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fragmentDep"
+          },
+          "description": "片段内依赖（局部 id；身体网格写素体身体网格名，如 Body_b）。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        }
+      },
+      "required": [
+        "schema",
+        "package",
+        "parts"
+      ]
+    },
+    "partId": {
+      "type": "string",
+      "pattern": "^(?!any\\.)[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+$",
+      "description": "语义部件 id：`<套装>.<件>`，至少两段，段内只用 [A-Za-z0-9_]；首段不能是 `any`（留给条件里的 `any.<kind>`）。例：kaguya.outer、MMN.socks、acc.foot_nail。依赖 id 同形；`geo.` 开头的依赖 id 留给 geo_defaults 生成项及其手写覆盖。"
+    },
+    "localId": {
+      "type": "string",
+      "pattern": "^(?!any\\.)[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)*$",
+      "description": "服装包片段内的局部 id（可单段）；被 includes 引入时加前缀 `<as>.` 成为全局 id。"
+    },
+    "writer": {
+      "type": "string",
+      "enum": [
+        "gen",
+        "vendor_sc",
+        "vendor_clip",
+        "vendor_fx",
+        "driver",
+        "ours_legacy",
+        "unknown"
+      ],
+      "description": "写者词表（封闭）。gen＝我方依赖编译器/生成器产物；vendor_sc＝厂商 prefab/场景里的 MA ShapeChanger（含 BlendshapeSync/ObjectToggle 等反应式组件）；vendor_clip＝厂商 ON/OFF 等 .anim 被控制器直接引用；vendor_fx＝经 MergeAnimator/VRCFury 并入的厂商 FX 层；driver＝VRC ParameterDriver 改参数间接驱动；ours_legacy＝我方历史手改或修补脚本产物（如 18:20 手工补挂的 SC），待迁入 gen；unknown＝尚未查明。"
+    },
+    "writerSet": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/writer"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/writer"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      ],
+      "description": "一个写者或写者列表（多写者同时存在时列全，如厂商 SC＋我方补挂副本）。"
+    },
+    "vendorWriter": {
+      "type": "string",
+      "enum": [
+        "vendor_sc",
+        "vendor_clip",
+        "vendor_fx"
+      ],
+      "description": "片段里的写者：只许厂商三类（片段只记厂商事实，03 Q1★）。"
+    },
+    "vendorWriterSet": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/vendorWriter"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/vendorWriter"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      ],
+      "description": "片段依赖的写者：一个或一组厂商写者。"
+    },
+    "level": {
+      "type": "string",
+      "enum": [
+        "high",
+        "mid",
+        "low",
+        "unknown"
+      ],
+      "description": "置信等级：high｜mid｜low｜unknown（unknown＝未验证，不是『低』）。"
+    },
+    "region": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "Hips",
+            "LeftUpperLeg",
+            "RightUpperLeg",
+            "LeftLowerLeg",
+            "RightLowerLeg",
+            "LeftFoot",
+            "RightFoot",
+            "Spine",
+            "Chest",
+            "UpperChest",
+            "Neck",
+            "Head",
+            "LeftShoulder",
+            "RightShoulder",
+            "LeftUpperArm",
+            "RightUpperArm",
+            "LeftLowerArm",
+            "RightLowerArm",
+            "LeftHand",
+            "RightHand",
+            "LeftToes",
+            "RightToes",
+            "LeftEye",
+            "RightEye",
+            "Jaw",
+            "LeftThumbProximal",
+            "LeftThumbIntermediate",
+            "LeftThumbDistal",
+            "LeftIndexProximal",
+            "LeftIndexIntermediate",
+            "LeftIndexDistal",
+            "LeftMiddleProximal",
+            "LeftMiddleIntermediate",
+            "LeftMiddleDistal",
+            "LeftRingProximal",
+            "LeftRingIntermediate",
+            "LeftRingDistal",
+            "LeftLittleProximal",
+            "LeftLittleIntermediate",
+            "LeftLittleDistal",
+            "RightThumbProximal",
+            "RightThumbIntermediate",
+            "RightThumbDistal",
+            "RightIndexProximal",
+            "RightIndexIntermediate",
+            "RightIndexDistal",
+            "RightMiddleProximal",
+            "RightMiddleIntermediate",
+            "RightMiddleDistal",
+            "RightRingProximal",
+            "RightRingIntermediate",
+            "RightRingDistal",
+            "RightLittleProximal",
+            "RightLittleIntermediate",
+            "RightLittleDistal",
+            "LeftFingers",
+            "RightFingers"
+          ]
+        },
+        {
+          "type": "string",
+          "pattern": "^(Left|Right)Foot\\.(forefoot|arch|heel|ankle)$"
+        }
+      ],
+      "description": "身体区域：Unity HumanBodyBones 名（55 个）；脚部子部位 `<Left|Right>Foot.<forefoot|arch|heel|ankle>`（趾用 LeftToes/RightToes）；聚合名 LeftFingers/RightFingers＝该侧 15 节指骨。区域按叶子展开求交并差：LeftFoot＝四个子部位之并，LeftFingers＝15 节指骨，其它骨名本身是叶子。"
+    },
+    "regionSet": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/region"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/region"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      ],
+      "description": "一个区域或区域列表（取并集）。"
+    },
+    "cond": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\n\\r]*$",
+      "description": "条件表达式（对『状态』求值：菜单参数向量＋其它参数＋体型轴＋姿势；语法见 schema/CONDITION_GRAMMAR.md §1 EBNF，语义 §2）。YAML 里一律加引号：`!`、`&`、`*`、`{` 开头会被 YAML 当成标签/锚点/别名/流映射，裸 true/false 会被解析成布尔而被本 schema 拒绝。"
+    },
+    "label": {
+      "type": "string",
+      "pattern": "^[^\\\"\\s]([^\\\"\\n\\r]*[^\\\"\\s])?$",
+      "description": "菜单档位标签（与 menu 里 labels 的字面一致；首尾无空白、不含双引号）。在条件与往返序列里，含空格或符号、或长得像数字的标签要用双引号括起。"
+    },
+    "param": {
+      "type": "string",
+      "pattern": "^(?!\\s)(?!.*\\s$)(?!.*->)[^\\x00-\\x1f\\x7f\\\":,→]+$",
+      "description": "Expression / 厂商 / VRChat 内置参数名（与 VRCExpressionParameters 或控制器一致）。允许空格、括号、&、#、$、+、中文（真实工程有 `CERP Pose`、`kaguya ear`）；不许双引号、`:`、`,`、`→`、`->` 与首尾空白（往返序列用它们作分隔）。在条件与往返序列里含空白或符号的参数名加双引号。"
+    },
+    "meshPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*//)(?!.*/$)(?!(.*/)?(AAO_Merged_|\\$\\$AAO_))[^\\n\\r#]+$",
+      "description": "渲染器所在物体的层级路径，相对头像根，用 `/` 分隔，不以 `/` 开头或结尾，不含 `#`；用源名（构建前名字），任何一段都不许以 `AAO_Merged_` 或 `$$AAO_` 开头（AAO/MA 构建产物名不稳定，03 F3）。"
+    },
+    "key": {
+      "type": "string",
+      "pattern": "^(?!(AAO_Merged_|\\$\\$AAO_))[^\\n\\r]+$",
+      "description": "形态键源名（构建前、`\\uXXXX` 已解码的原文）；不许以 `AAO_Merged_` 或 `$$AAO_` 开头（构建产物名，03 §3）。"
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "日期 YYYY-MM-DD。YAML 里要加引号（PyYAML 会把裸日期解析成 date 对象）。"
+    },
+    "source": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^(文件|实测|推断|未核|用户|S(10|[1-9]))[ ：:]\\S"
+      },
+      "description": "来源列表，每条以证据等级开头：文件｜实测｜推断｜未核｜用户，或草案来源 S1–S10（03a Q1-⑤），后接空格或冒号再写出处（文件:行、状态名、clip 名等）。"
+    },
+    "note": {
+      "type": "string",
+      "description": "自由备注，不参与校验。"
+    },
+    "human": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "description": "已答的人判项。",
+          "additionalProperties": false,
+          "properties": {
+            "q": {
+              "type": "string",
+              "minLength": 1,
+              "description": "问题原文。"
+            },
+            "a": {
+              "type": "string",
+              "minLength": 1,
+              "description": "答案（设计意图的结论句）。"
+            },
+            "by": {
+              "type": "string",
+              "minLength": 1,
+              "description": "答复人（用户 / 客户 / Claude 按厂商展示图 等）。"
+            },
+            "date": {
+              "$ref": "#/$defs/date",
+              "description": "答复日期。"
+            }
+          },
+          "required": [
+            "q",
+            "a",
+            "by",
+            "date"
+          ]
+        }
+      ],
+      "description": "人判项。字符串＝待答问题；对象＝已答（q 问题、a 答案、by 谁答、date 何时）。校验器把待答项列进人判清单；答案写回后改对象形式。"
+    },
+    "poseSel": {
+      "type": "string",
+      "pattern": "^(tag:[A-Za-z0-9_]+|[A-Za-z0-9_\\u3400-\\u4dbf\\u4e00-\\u9fff\\uf900-\\ufaff]+(@[0-9]+)?)$",
+      "description": "姿势选择子：姿势 id（T-26 pose_library.json 的 id：字母数字下划线与汉字，多帧 clip 的帧加 `@<帧号>`；命名见 CONDITION_GRAMMAR.md §3，如 proxy_sit、B_knee_L_75、C_emote_emote_1_wave），或 `tag:<tag>` 选中 tags 含该 tag 的全部姿势（tag 见 §3）。"
+    },
+    "control": {
+      "type": "object",
+      "description": "一个菜单控件（参数＋编码＋档位标签）。条件里用 `ctl(<控件名>) = <标签>` 按标签引用（int/float_slots），或 `param(<参数名>)` 按原始值比较。",
+      "additionalProperties": false,
+      "properties": {
+        "param": {
+          "$ref": "#/$defs/param",
+          "description": "该控件驱动的参数名。"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "bool",
+            "int",
+            "float_slots",
+            "float"
+          ],
+          "description": "编码：bool＝0/1；int＝整数槽号 i；float_slots＝Float 参数，第 i 档取值 i/n（n＝labels 数，Motion Time＋常量切线，00 #5：0.2857<2/7 会落进上一档）；float＝连续 0–1。"
+        },
+        "labels": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/label"
+          },
+          "description": "各档标签，下标＝槽号 i；int / float_slots 必填（≥2 项），bool / float 不许写。"
+        },
+        "default": {
+          "type": "number",
+          "description": "参数默认值（原始值，不是槽号）：bool 为 0/1；int 为槽号；float_slots 必须恰好落在某个 i/n；float 在 [0,1]。"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "description": "菜单上显示的名字（中文名），只作提示。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        }
+      },
+      "required": [
+        "param",
+        "type",
+        "default"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": [
+                  "int",
+                  "float_slots"
+                ]
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "labels"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "bool"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "labels": {
+                "description": "bool 控件不许写 labels",
+                "not": {}
+              },
+              "default": {
+                "enum": [
+                  0,
+                  1
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "float"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "labels": {
+                "description": "float 控件不许写 labels",
+                "not": {}
+              },
+              "default": {
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "menu": {
+      "type": "object",
+      "description": "菜单输入段（v0.2 起是声明的输入：生成器按它建参数与档位，T4 params.json 只对账，不再自动回填，03 §3）。片段里不许有。",
+      "additionalProperties": false,
+      "properties": {
+        "outfit": {
+          "type": "object",
+          "description": "整套选择器（轮盘）：条件里的 `outfit = <标签>` 按它解析；type 只能 int 或 float_slots。",
+          "additionalProperties": false,
+          "properties": {
+            "param": {
+              "$ref": "#/$defs/param",
+              "description": "该控件驱动的参数名。"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "int",
+                "float_slots"
+              ],
+              "description": "编码：bool＝0/1；int＝整数槽号 i；float_slots＝Float 参数，第 i 档取值 i/n（n＝labels 数，Motion Time＋常量切线，00 #5：0.2857<2/7 会落进上一档）；float＝连续 0–1。"
+            },
+            "labels": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "$ref": "#/$defs/label"
+              },
+              "description": "各档标签，下标＝槽号 i；int / float_slots 必填（≥2 项），bool / float 不许写。"
+            },
+            "default": {
+              "type": "number",
+              "description": "参数默认值（原始值，不是槽号）：bool 为 0/1；int 为槽号；float_slots 必须恰好落在某个 i/n；float 在 [0,1]。"
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "description": "菜单上显示的名字（中文名），只作提示。"
+            },
+            "note": {
+              "$ref": "#/$defs/note",
+              "description": "自由备注，不参与校验。"
+            }
+          },
+          "required": [
+            "param",
+            "type",
+            "default"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "int",
+                      "float_slots"
+                    ]
+                  }
+                },
+                "required": [
+                  "type"
+                ]
+              },
+              "then": {
+                "required": [
+                  "labels"
+                ]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "bool"
+                  }
+                },
+                "required": [
+                  "type"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "labels": {
+                    "description": "bool 控件不许写 labels",
+                    "not": {}
+                  },
+                  "default": {
+                    "enum": [
+                      0,
+                      1
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "float"
+                  }
+                },
+                "required": [
+                  "type"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "labels": {
+                    "description": "float 控件不许写 labels",
+                    "not": {}
+                  },
+                  "default": {
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "slots": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "description": "部位开关（bool）：一个开关管所有整套在该部位的件。",
+            "additionalProperties": false,
+            "properties": {
+              "param": {
+                "$ref": "#/$defs/param",
+                "description": "该控件驱动的参数名。"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "bool"
+                ],
+                "description": "编码：bool＝0/1；int＝整数槽号 i；float_slots＝Float 参数，第 i 档取值 i/n（n＝labels 数，Motion Time＋常量切线，00 #5：0.2857<2/7 会落进上一档）；float＝连续 0–1。"
+              },
+              "labels": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "$ref": "#/$defs/label"
+                },
+                "description": "各档标签，下标＝槽号 i；int / float_slots 必填（≥2 项），bool / float 不许写。"
+              },
+              "default": {
+                "type": "number",
+                "description": "参数默认值（原始值，不是槽号）：bool 为 0/1；int 为槽号；float_slots 必须恰好落在某个 i/n；float 在 [0,1]。"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "description": "菜单上显示的名字（中文名），只作提示。"
+              },
+              "note": {
+                "$ref": "#/$defs/note",
+                "description": "自由备注，不参与校验。"
+              }
+            },
+            "required": [
+              "param",
+              "type",
+              "default"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "enum": [
+                        "int",
+                        "float_slots"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "labels"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "const": "bool"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "labels": {
+                      "description": "bool 控件不许写 labels",
+                      "not": {}
+                    },
+                    "default": {
+                      "enum": [
+                        0,
+                        1
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "const": "float"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "labels": {
+                      "description": "float 控件不许写 labels",
+                      "not": {}
+                    },
+                    "default": {
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "description": "部位开关表：名字 → bool 控件。条件里的 `slot(<名>)` 与 parts[].slot 引用这里的名字。"
+        },
+        "controls": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/control"
+          },
+          "description": "其它菜单控件（发型、头饰、配饰开关、胸围等）：名字 → 控件。条件里 `ctl(<名>)` 按标签、`param(<参数名>)` 按原始值引用；parts[].toggle 与 body_axes 也可引用。"
+        }
+      },
+      "minProperties": 1
+    },
+    "avatar": {
+      "type": "object",
+      "description": "被声明的头像。",
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "type": "string",
+          "minLength": 1,
+          "description": "工程标识：客户单写 COMM 订单号（如 工程A），私人单写工程目录名。"
+        },
+        "root": {
+          "type": "string",
+          "minLength": 1,
+          "description": "场景里头像根物体名（带 VRCAvatarDescriptor）；T1/T-05 按它定位实例。"
+        },
+        "body": {
+          "$ref": "#/$defs/meshPath",
+          "description": "身体网格路径（相对头像根，如 Body_b）；target.mesh 可直接引用它；片段里的 mesh 必须等于它（SEM-18）。"
+        },
+        "profile": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_\\-]+@[0-9A-Za-z][0-9A-Za-z._\\-]*$",
+          "description": "素体档案引用 `<素体>@<版本>` → `开发工具/素体档案/<素体>.yaml`（03a Q1-④）；baseline 与键类别从这里取。"
+        },
+        "scene": {
+          "type": "string",
+          "pattern": "^Assets/[^\\n\\r]+\\.unity$",
+          "description": "场景文件路径（相对工程根），可选；有多个场景时必填以免歧义。"
+        }
+      },
+      "required": [
+        "project",
+        "root",
+        "body",
+        "profile"
+      ]
+    },
+    "include": {
+      "type": "object",
+      "description": "引入一份服装包声明片段（`开发工具/素材包说明/<包>.decl.yaml`，按包×素体建）。展开规则见 CONDITION_GRAMMAR.md §6。",
+      "additionalProperties": false,
+      "properties": {
+        "fragment": {
+          "type": "string",
+          "pattern": "^(?!/)[^\\n\\r]+\\.decl\\.yaml$",
+          "description": "片段文件路径，相对工作区根 `~/vrc-processing/`，必须以 .decl.yaml 结尾。"
+        },
+        "mount": {
+          "$ref": "#/$defs/meshPath",
+          "description": "片段根在本头像里的路径：片段 parts[].objects.path 前面拼上它（片段 deps 的 target.mesh 是身体网格，不拼）。"
+        },
+        "as": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_]+$",
+          "description": "id 前缀：片段内局部 id `x` 引入后成为 `<as>.x`（条件与 target 里的引用同步改写）。"
+        },
+        "outfit": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/label"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/label"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          ],
+          "description": "引入的部件所属整套档位标签（写进每个引入部件的 outfit）；可多档。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        }
+      },
+      "required": [
+        "fragment",
+        "mount",
+        "as"
+      ]
+    },
+    "meshKey": {
+      "type": "object",
+      "description": "一个网格上的一个形态键。",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "$ref": "#/$defs/meshPath",
+          "description": "网格路径。"
+        },
+        "key": {
+          "$ref": "#/$defs/key",
+          "description": "形态键源名。"
+        }
+      },
+      "required": [
+        "mesh",
+        "key"
+      ]
+    },
+    "bodyAxis": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "由形态键定义的体型轴。",
+          "additionalProperties": false,
+          "properties": {
+            "key": {
+              "$ref": "#/$defs/meshKey",
+              "description": "取该键权重/100。"
+            },
+            "samples": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "description": "状态展开时该轴的取样点（0–1，升序不重复）；缺省 [0, 0.5, 1]，再并上条件里出现的区间端点（CONDITION_GRAMMAR.md §6 临界点取样）。"
+            },
+            "note": {
+              "$ref": "#/$defs/note",
+              "description": "自由备注，不参与校验。"
+            }
+          },
+          "required": [
+            "key"
+          ]
+        },
+        {
+          "type": "object",
+          "description": "由参数定义的体型轴。",
+          "additionalProperties": false,
+          "properties": {
+            "param": {
+              "$ref": "#/$defs/param",
+              "description": "参数名（菜单或厂商参数，值域 0–1）。"
+            },
+            "samples": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "description": "状态展开时该轴的取样点（0–1，升序不重复）；缺省 [0, 0.5, 1]，再并上条件里出现的区间端点（CONDITION_GRAMMAR.md §6 临界点取样）。"
+            },
+            "note": {
+              "$ref": "#/$defs/note",
+              "description": "自由备注，不参与校验。"
+            }
+          },
+          "required": [
+            "param"
+          ]
+        }
+      ],
+      "description": "体型轴：把体型量归一到 [0,1]，供条件 `body.<轴> in <区间>` 使用。二选一：key＝某形态键权重/100；param＝某参数原值（0–1）。"
+    },
+    "geoDefaults": {
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object",
+          "description": "逐项指定的默认几何依赖。",
+          "additionalProperties": false,
+          "properties": {
+            "closed": {
+              "type": "string",
+              "enum": [
+                "inside",
+                "no_pierce",
+                "none"
+              ],
+              "description": "fit: closed（鞋/靴/手套）的静态主项度量：inside｜no_pierce｜none（不生成）。缺省 inside。"
+            },
+            "tight": {
+              "type": "string",
+              "enum": [
+                "no_pierce",
+                "none"
+              ],
+              "description": "fit: tight（袜/紧身衣/内衣）的静态主项度量：no_pierce｜none。缺省 no_pierce。"
+            },
+            "loose": {
+              "type": "string",
+              "enum": [
+                "no_pierce",
+                "none"
+              ],
+              "description": "fit: loose（外套/裙）的静态主项度量：no_pierce｜none。缺省 none（U1 仍对它兜底）。"
+            },
+            "cover": {
+              "type": "string",
+              "enum": [
+                "no_poke",
+                "none"
+              ],
+              "description": "每个覆盖件（fit≠none 且 covers 非空）的姿势项：no_poke｜none。缺省 no_poke（03 §8.5）。"
+            },
+            "opening": {
+              "type": "string",
+              "enum": [
+                "opening_intact",
+                "none"
+              ],
+              "description": "有 openings 的件的开口项：opening_intact｜none。缺省 opening_intact。"
+            },
+            "exclude": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/partId"
+              },
+              "uniqueItems": true,
+              "description": "不生成任何默认几何依赖的部件 id。"
+            },
+            "note": {
+              "$ref": "#/$defs/note",
+              "description": "自由备注，不参与校验。"
+            }
+          }
+        }
+      ],
+      "description": "默认几何依赖生成开关（03 乙1：防『声明照抄厂商』的共模失效；静态度量与通用规则 U1 同一口径，生成项让它有 dep id，可按件改阈值、区域与豁免）。true＝全按缺省（closed→inside、tight→no_pierce、loose→none、cover→no_poke、opening→opening_intact）；false＝全关；对象＝逐项指定，没写的项取缺省。展开规则（decl_validate 写进 decl.json，详见 CONDITION_GRAMMAR.md §6）：对 fit≠none、covers 非空、不在 exclude 里的部件 p，令 R＝covers 减去 openings 的区域（按叶子）：① 静态主项 `geo.<p>`（按 fit 取度量，R 为空不生成，kind shoes→D2、socks→D3、其余 D1）；② 有 openings 时 `geo.<p>.opening`（opening_intact，区域＝openings 之并，kind 同①）；③ 覆盖件姿势项 `geo.<p>.poke`（no_poke，区域 R，kind D8，R 为空不生成）。三者都是 when vis(<p>)、else dont_care、target {part: p}、writer unknown、confidence {writer: unknown, correct: mid}。手写同 id 的 dep 覆盖生成项；不要手写生成项。`on/off` 在 YAML 1.1 里会被解析成布尔，直接写 true/false。"
+    },
+    "roundtripDefault": {
+      "type": "object",
+      "description": "全局往返序列（每条 dep 默认都跑，除非 dep.roundtrip 覆盖）。",
+      "additionalProperties": false,
+      "properties": {
+        "history_k": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "description": "切换历史最大长度 k（T1 reset:none 显式序列的步数上限）。缺省 2。"
+        },
+        "templates": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "slot_1_0_1",
+              "slot_0_1_0",
+              "outfit_A_B_A"
+            ]
+          },
+          "description": "模板：slot_1_0_1＝条件里出现的每个部位开关 1→0→1；slot_0_1_0＝0→1→0；outfit_A_B_A＝整套 A→相邻档 B→A。缺省三者全开。"
+        }
+      },
+      "required": [
+        "templates"
+      ]
+    },
+    "poses": {
+      "type": "object",
+      "description": "姿势检查设置（03 §8，T-32 并入 T-01）。不写＝全取缺省。姿势 id 与 tag 的命名见 CONDITION_GRAMMAR.md §3；与状态的组合与剪枝由 pose_plan（T-29）按 covers×moved_regions 算。",
+      "additionalProperties": false,
+      "properties": {
+        "libraries": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "A",
+              "B",
+              "C"
+            ]
+          },
+          "description": "启用的姿势库：A 真实静态姿势（SDK proxy、GoGo、工程私有）｜B 关节扫掠（程序生成 66 条）｜C 真动作 clip（GM 表情、GoGo 多帧、extra_clips）。缺省 [A, B, C]。"
+        },
+        "extra_clips": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(Assets|Packages)/[^\\n\\r]+\\.anim$"
+          },
+          "description": "用户额外提供的人形 clip（库 C，P11）：工程内路径，Assets/ 或 Packages/ 开头、.anim 结尾；id 为 `C_extra_<规范化文件名>`。"
+        },
+        "pb_default": {
+          "type": "string",
+          "enum": [
+            "rigid",
+            "settle",
+            "both"
+          ],
+          "description": "有 PhysBone 的部件默认 PB 模式（P12，缺省 both）：rigid 刚性（PB 关掉回 rest）｜settle 稳态（固定 dt 模拟到收敛）｜both 两种都跑按解释表判。没有 PB 的部件一律 rigid。"
+        },
+        "dose_envelope": {
+          "type": "string",
+          "enum": [
+            "libraryA",
+            "extreme"
+          ],
+          "description": "库 B 剂量包络（P13，缺省 libraryA）：libraryA＝100% 取库 A 全部帧该肌肉方向的极值；extreme＝另外生成 HumanDescription ±1 的 `B_<关节>_<侧>_extreme_m1|p1` 档（一期始终 advisory）。"
+        },
+        "private_clips": {
+          "type": "boolean",
+          "description": "库 A 是否收工程私有人形 clip（描述符 5 层控制器引用到的，如 CERP Pose 1–11；P14，缺省 true）。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        }
+      }
+    },
+    "render": {
+      "type": "object",
+      "description": "渲染/抓屏设置（01 §8 抓屏、03 §4.1 U4）。",
+      "additionalProperties": false,
+      "properties": {
+        "grab_point_min": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5000,
+          "description": "抓取点下限（渲染队列）：本头像内具名 GrabPass 材质的最小队列须 ≥ 此值（U4；缺省 3050）；expect.grab.point_min 不写时取它。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        }
+      }
+    },
+    "object": {
+      "type": "object",
+      "description": "部件的一个渲染物体（v0.2：必须带 Renderer，03 §3 / F9）。",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/meshPath",
+          "description": "物体路径（相对头像根；片段内相对 mount）。"
+        },
+        "renderer": {
+          "type": "string",
+          "enum": [
+            "smr",
+            "mesh"
+          ],
+          "description": "该物体上的渲染器类型：smr＝SkinnedMeshRenderer（有形态键）｜mesh＝MeshRenderer。没有渲染器的包装物体不能当 objects（mdnailtool 等插件会删包装物体）。decl_validate 有 inventory.json 时核对真实类型。"
+        },
+        "submesh": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "只指该渲染器的第几个材质槽（子网格），从 0 起；不写＝整个渲染器。"
+        }
+      },
+      "required": [
+        "path",
+        "renderer"
+      ]
+    },
+    "vendorClip": {
+      "type": "object",
+      "description": "厂商 ON/OFF clip（S3 草案来源；生成器照搬其全部曲线，MenuGenA2.cs:465）。键名不用 on/off（YAML 1.1 会把 on/off 解析成布尔）。",
+      "additionalProperties": false,
+      "properties": {
+        "on_clip": {
+          "type": "string",
+          "pattern": "^Assets/[^\\n\\r]+\\.anim$",
+          "description": "开启 clip 路径（相对工程根）。"
+        },
+        "off_clip": {
+          "type": "string",
+          "pattern": "^Assets/[^\\n\\r]+\\.anim$",
+          "description": "关闭 clip 路径（相对工程根）。"
+        }
+      },
+      "required": [
+        "on_clip",
+        "off_clip"
+      ]
+    },
+    "opening": {
+      "type": "object",
+      "description": "设计开口（露趾/露跟/领口等）：几何度量的区域减去它；有开口的件另生成 geo.<部件>.opening 跑 opening_intact。",
+      "additionalProperties": false,
+      "properties": {
+        "region": {
+          "$ref": "#/$defs/regionSet",
+          "description": "开口所在身体区域。"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "open_toe",
+            "open_heel",
+            "open_finger",
+            "neckline",
+            "slit",
+            "other"
+          ],
+          "description": "开口类型：open_toe 露趾｜open_heel 露跟｜open_finger 露指｜neckline 领口｜slit 开衩｜other。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        }
+      },
+      "required": [
+        "region",
+        "kind"
+      ]
+    },
+    "toggle": {
+      "type": "object",
+      "description": "部件与非部位开关控件的绑定（发型档、头饰档、配饰开关等；与 slot 互斥）：控件 control 取值命中 shown_at 时该件应显示。进入期望可见性模型（CONDITION_GRAMMAR.md §2.2），DepCompiler 与状态回读断言用它。键名不用 on（YAML 1.1 会把 on 解析成布尔）。",
+      "additionalProperties": false,
+      "properties": {
+        "control": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "menu.controls 里的控件名（不能是 float 控件）。"
+        },
+        "shown_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/label"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/label"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ]
+            }
+          ],
+          "description": "命中值：int/float_slots 控件写标签或标签列表（任一命中）；bool 控件写 0 或 1（原始值）。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        }
+      },
+      "required": [
+        "control",
+        "shown_at"
+      ]
+    },
+    "poseScope": {
+      "type": "object",
+      "description": "该件的姿势配对覆盖（03 §8.4 剪枝的人工修正）。include 的姿势不受 covers×moved_regions 剪枝、在按秒预算截断里优先；exclude 的姿势不配；两边都命中时 exclude 胜。",
+      "additionalProperties": false,
+      "properties": {
+        "include": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/poseSel"
+          },
+          "description": "强制配对的姿势选择子。"
+        },
+        "exclude": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/poseSel"
+          },
+          "description": "不配对的姿势选择子。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        }
+      },
+      "minProperties": 1
+    },
+    "part": {
+      "type": "object",
+      "description": "语义部件（声明的主语：一件衣物/配饰，映射到若干渲染物体）。",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/partId",
+          "description": "部件 id（全声明唯一）。"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "outer",
+            "top",
+            "bottom",
+            "onepiece",
+            "underwear",
+            "socks",
+            "shoes",
+            "gloves",
+            "hat",
+            "hair",
+            "acc",
+            "body_part"
+          ],
+          "description": "部件种类（封闭词表）：outer 外套｜top 上衣｜bottom 下装｜onepiece 连衣裙/连体｜underwear 内衣｜socks 袜/丝袜｜shoes 鞋/靴｜gloves 手套｜hat 帽｜hair 发型｜acc 配饰（含美甲）｜body_part 身体附件（耳尾等）。条件 `any.<kind>` 按它聚合。"
+        },
+        "slot": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "归哪个部位开关（menu.slots 的名字）；null 或不写＝无开关。与 toggle 互斥；有 alt_of 的备选件必须为 null。"
+        },
+        "toggle": {
+          "$ref": "#/$defs/toggle",
+          "description": "部件与非部位开关控件的绑定（发型档、头饰档、配饰开关等；与 slot 互斥）：控件 control 取值命中 shown_at 时该件应显示。进入期望可见性模型（CONDITION_GRAMMAR.md §2.2），DepCompiler 与状态回读断言用它。键名不用 on（YAML 1.1 会把 on 解析成布尔）。"
+        },
+        "objects": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/object"
+          },
+          "description": "组成该部件的渲染物体（≥1）。部件可见＝任一物体四分量都通过（见 CONDITION_GRAMMAR.md §2 的 vis 语义）。"
+        },
+        "alt_of": {
+          "$ref": "#/$defs/partId",
+          "description": "备选件：本件是哪个部件的二选一备选（取代 03a 的 alt_objects）。备选件默认不激活、不进开关组（VENDOR_ALT），与主件构成变体组供 expect.variant 使用。"
+        },
+        "vendor_clip": {
+          "$ref": "#/$defs/vendorClip",
+          "description": "厂商 ON/OFF clip。"
+        },
+        "covers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/region"
+          },
+          "uniqueItems": true,
+          "description": "覆盖的身体区域（可由 S6 覆盖骨骼占比自动起草）；geo_defaults 生成的几何依赖以此为 region，校验器配对健全性与姿势剪枝只认这里（03 §4.4 ④、§8.4）。"
+        },
+        "fit": {
+          "type": "string",
+          "enum": [
+            "closed",
+            "tight",
+            "loose",
+            "none"
+          ],
+          "description": "与身体的贴合方式（取代 03a 的 closed 布尔）：closed 封闭件（鞋/靴/手套，包住肢端）｜tight 贴身件（袜/紧身衣/内衣）｜loose 宽松件（外套/裙）｜none 不接触身体（发型/配饰/美甲）。geo_defaults 按它选默认度量。"
+        },
+        "openings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/opening"
+          },
+          "description": "设计开口列表（人判项，S4 说明书/展示图）；空＝无开口。"
+        },
+        "owner_writers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/writer"
+          },
+          "description": "期望驱动本件显隐（V1/V2）的写者集合；校验器把集合外的显隐写者报 unexpected_writer。"
+        },
+        "pb": {
+          "type": "string",
+          "enum": [
+            "rigid",
+            "settle",
+            "both"
+          ],
+          "description": "该件的 PhysBone 模式，覆盖 poses.pb_default：rigid｜settle｜both。件上没有 PB（T-30 pb.json）时写 settle/both 只出警告、按 rigid 跑。"
+        },
+        "pose_scope": {
+          "$ref": "#/$defs/poseScope",
+          "description": "该件的姿势配对覆盖（03 §8.4 剪枝的人工修正）。include 的姿势不受 covers×moved_regions 剪枝、在按秒预算截断里优先；exclude 的姿势不配；两边都命中时 exclude 胜。"
+        },
+        "human": {
+          "$ref": "#/$defs/human",
+          "description": "该件的人判项（露趾/露跟/包趾/叠穿意图等）。"
+        },
+        "source": {
+          "$ref": "#/$defs/source",
+          "description": "部件映射的来源。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        },
+        "outfit": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/label"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/label"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "所属整套档位标签（menu.outfit.labels 里的字面）；同一件出现在多档写列表；null 或不写＝不随整套（发型、美甲、常驻配饰）。"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "objects",
+        "fit"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "alt_of"
+            ]
+          },
+          "then": {
+            "properties": {
+              "slot": {
+                "type": "null"
+              },
+              "toggle": {
+                "description": "备选件不进开关组，不许写 toggle",
+                "not": {}
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "slot"
+            ],
+            "properties": {
+              "slot": {
+                "type": "string"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "toggle": {
+                "description": "slot 与 toggle 互斥",
+                "not": {}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "fragmentPart": {
+      "type": "object",
+      "description": "语义部件（声明的主语：一件衣物/配饰，映射到若干渲染物体）。片段内版本：id 为局部 id，objects.path 相对 mount，不写 outfit（由 includes 指定）；slot/toggle 引用引入它的声明的 menu。",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/localId",
+          "description": "部件 id（全声明唯一）。"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "outer",
+            "top",
+            "bottom",
+            "onepiece",
+            "underwear",
+            "socks",
+            "shoes",
+            "gloves",
+            "hat",
+            "hair",
+            "acc",
+            "body_part"
+          ],
+          "description": "部件种类（封闭词表）：outer 外套｜top 上衣｜bottom 下装｜onepiece 连衣裙/连体｜underwear 内衣｜socks 袜/丝袜｜shoes 鞋/靴｜gloves 手套｜hat 帽｜hair 发型｜acc 配饰（含美甲）｜body_part 身体附件（耳尾等）。条件 `any.<kind>` 按它聚合。"
+        },
+        "slot": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "归哪个部位开关（menu.slots 的名字）；null 或不写＝无开关。与 toggle 互斥；有 alt_of 的备选件必须为 null。"
+        },
+        "toggle": {
+          "$ref": "#/$defs/toggle",
+          "description": "部件与非部位开关控件的绑定（发型档、头饰档、配饰开关等；与 slot 互斥）：控件 control 取值命中 shown_at 时该件应显示。进入期望可见性模型（CONDITION_GRAMMAR.md §2.2），DepCompiler 与状态回读断言用它。键名不用 on（YAML 1.1 会把 on 解析成布尔）。"
+        },
+        "objects": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/object"
+          },
+          "description": "组成该部件的渲染物体（≥1）。部件可见＝任一物体四分量都通过（见 CONDITION_GRAMMAR.md §2 的 vis 语义）。"
+        },
+        "alt_of": {
+          "$ref": "#/$defs/localId",
+          "description": "备选件：本件是哪个部件的二选一备选（取代 03a 的 alt_objects）。备选件默认不激活、不进开关组（VENDOR_ALT），与主件构成变体组供 expect.variant 使用。"
+        },
+        "vendor_clip": {
+          "$ref": "#/$defs/vendorClip",
+          "description": "厂商 ON/OFF clip。"
+        },
+        "covers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/region"
+          },
+          "uniqueItems": true,
+          "description": "覆盖的身体区域（可由 S6 覆盖骨骼占比自动起草）；geo_defaults 生成的几何依赖以此为 region，校验器配对健全性与姿势剪枝只认这里（03 §4.4 ④、§8.4）。"
+        },
+        "fit": {
+          "type": "string",
+          "enum": [
+            "closed",
+            "tight",
+            "loose",
+            "none"
+          ],
+          "description": "与身体的贴合方式（取代 03a 的 closed 布尔）：closed 封闭件（鞋/靴/手套，包住肢端）｜tight 贴身件（袜/紧身衣/内衣）｜loose 宽松件（外套/裙）｜none 不接触身体（发型/配饰/美甲）。geo_defaults 按它选默认度量。"
+        },
+        "openings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/opening"
+          },
+          "description": "设计开口列表（人判项，S4 说明书/展示图）；空＝无开口。"
+        },
+        "owner_writers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/writer"
+          },
+          "description": "期望驱动本件显隐（V1/V2）的写者集合；校验器把集合外的显隐写者报 unexpected_writer。"
+        },
+        "pb": {
+          "type": "string",
+          "enum": [
+            "rigid",
+            "settle",
+            "both"
+          ],
+          "description": "该件的 PhysBone 模式，覆盖 poses.pb_default：rigid｜settle｜both。件上没有 PB（T-30 pb.json）时写 settle/both 只出警告、按 rigid 跑。"
+        },
+        "pose_scope": {
+          "$ref": "#/$defs/poseScope",
+          "description": "该件的姿势配对覆盖（03 §8.4 剪枝的人工修正）。include 的姿势不受 covers×moved_regions 剪枝、在按秒预算截断里优先；exclude 的姿势不配；两边都命中时 exclude 胜。"
+        },
+        "human": {
+          "$ref": "#/$defs/human",
+          "description": "该件的人判项（露趾/露跟/包趾/叠穿意图等）。"
+        },
+        "source": {
+          "$ref": "#/$defs/source",
+          "description": "部件映射的来源。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "objects",
+        "fit"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "alt_of"
+            ]
+          },
+          "then": {
+            "properties": {
+              "slot": {
+                "type": "null"
+              },
+              "toggle": {
+                "description": "备选件不进开关组，不许写 toggle",
+                "not": {}
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "slot"
+            ],
+            "properties": {
+              "slot": {
+                "type": "string"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "toggle": {
+                "description": "slot 与 toggle 互斥",
+                "not": {}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "target": {
+      "type": "object",
+      "description": "期望作用的对象。形状：{part}＝部件本身（显隐/变体/几何/抓屏）；{part, submesh}＝该部件的某个材质槽（只配 grab）；{part, key|keys}＝该部件每个 smr 上的键；{mesh, key|keys}＝指定网格上的键；{mesh} 或 {part} 不带键＝配合 expect.values（键在 values 里）。",
+      "additionalProperties": false,
+      "properties": {
+        "part": {
+          "type": "string",
+          "pattern": "^(?!any\\.)[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)*$",
+          "description": "部件 id（片段内为局部 id）。"
+        },
+        "mesh": {
+          "$ref": "#/$defs/meshPath",
+          "description": "网格路径：avatar.body 或某部件 objects 里 renderer: smr 的路径；片段里只许写身体网格（SEM-18）。"
+        },
+        "submesh": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "材质槽下标（从 0 起），只随 part、只配 expect.grab；不写＝整个部件。"
+        },
+        "key": {
+          "$ref": "#/$defs/key",
+          "description": "单个形态键。"
+        },
+        "keys": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/key"
+          },
+          "description": "多个形态键，共用同一期望（取代 03a 的 keys 映射写法；逐键不同值改用 expect.values）。"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "part"
+          ]
+        },
+        {
+          "required": [
+            "mesh"
+          ]
+        }
+      ],
+      "dependentSchemas": {
+        "part": {
+          "properties": {
+            "mesh": {
+              "description": "part 与 mesh 二选一",
+              "not": {}
+            }
+          }
+        },
+        "key": {
+          "properties": {
+            "keys": {
+              "description": "key 与 keys 二选一",
+              "not": {}
+            }
+          }
+        },
+        "submesh": {
+          "required": [
+            "part"
+          ],
+          "properties": {
+            "key": {
+              "description": "submesh 不与键同用",
+              "not": {}
+            },
+            "keys": {
+              "description": "submesh 不与键同用",
+              "not": {}
+            }
+          }
+        }
+      }
+    },
+    "geoInside": {
+      "type": "object",
+      "description": "封闭件包住的区域：主判据＝静态穿出斑块（T-28a；外壳有向深度 > max_depth_mm 且连通面积 ≥ min_area_cm2 的斑块数＝0，与 U1 同口径）；边界边 `opening` 与 Delete 顶点单独报；子部位包含率只作参考列（00 #8、03 §4.6、F26）。",
+      "additionalProperties": false,
+      "properties": {
+        "region": {
+          "$ref": "#/$defs/regionSet",
+          "description": "被检查的身体区域（取并集，按叶子展开）。"
+        },
+        "max_depth_mm": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "外壳有向穿出深度阈值 τ（mm）；不写取 thresholds.yaml（初值 躯干 2 / 四肢 3，先量后定，03 §4.6）。"
+        },
+        "min_area_cm2": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "斑块连通面积下限（cm²）；不写取 thresholds.yaml（初值 0.5）。"
+        },
+        "min_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "子部位包含率参考值（0–1）：只作参考列、不进卡口（Delete/开口款天然偏低）。"
+        }
+      },
+      "required": [
+        "region"
+      ]
+    },
+    "geoNoPierce": {
+      "type": "object",
+      "description": "贴身/宽松件：该区域静态穿出斑块数＝0（判据同 inside，但不报包含率参考）；Delete 顶点单独报。",
+      "additionalProperties": false,
+      "properties": {
+        "region": {
+          "$ref": "#/$defs/regionSet",
+          "description": "被检查的身体区域（取并集，按叶子展开）。"
+        },
+        "max_depth_mm": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "外壳有向穿出深度阈值 τ（mm）；不写取 thresholds.yaml（初值 躯干 2 / 四肢 3，先量后定，03 §4.6）。"
+        },
+        "min_area_cm2": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "斑块连通面积下限（cm²）；不写取 thresholds.yaml（初值 0.5）。"
+        }
+      },
+      "required": [
+        "region"
+      ]
+    },
+    "geoNoPoke": {
+      "type": "object",
+      "description": "姿势中不穿出（03 §8.2 T-28b）：在 pose_plan 配给该件的每个 (姿势, PB 模式) 帧上，pose_induced 斑块（顶点 d_pose > τ 且 d_base ≤ τ/2，对 stand_still 差分）连通面积 ≥ min_area_cm2 的数＝0；static_grown 与 opening_deep 只 advisory；PB 两模式按解释表（✗/✓ pb_dependent 信息，✗/✗、✓/✗ 违例）。E14 通过前 advisory。",
+      "additionalProperties": false,
+      "properties": {
+        "region": {
+          "$ref": "#/$defs/regionSet",
+          "description": "被检查的身体区域（取并集，按叶子展开）。"
+        },
+        "max_depth_mm": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "外壳有向穿出深度阈值 τ（mm）；不写取 thresholds.yaml（初值 躯干 2 / 四肢 3，先量后定，03 §4.6）。"
+        },
+        "min_area_cm2": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "斑块连通面积下限（cm²）；不写取 thresholds.yaml（初值 0.5）。"
+        }
+      },
+      "required": [
+        "region"
+      ]
+    },
+    "geoOpening": {
+      "type": "object",
+      "description": "设计开口完好：开口区域不被收缩键内收或被 Delete（R6『缩过头』）。",
+      "additionalProperties": false,
+      "properties": {
+        "region": {
+          "$ref": "#/$defs/regionSet",
+          "description": "被检查的身体区域（取并集，按叶子展开）。"
+        },
+        "max_shrink_mm": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "开口区域顶点沿法线内收的上限（mm）；不写取 thresholds.yaml。"
+        }
+      },
+      "required": [
+        "region"
+      ]
+    },
+    "geo": {
+      "type": "object",
+      "description": "几何度量（03 §4.6、§8.2）；恰好写一种。标定前只 advisory。",
+      "additionalProperties": false,
+      "properties": {
+        "inside": {
+          "$ref": "#/$defs/geoInside",
+          "description": "封闭件包住的区域：主判据＝静态穿出斑块（T-28a；外壳有向深度 > max_depth_mm 且连通面积 ≥ min_area_cm2 的斑块数＝0，与 U1 同口径）；边界边 `opening` 与 Delete 顶点单独报；子部位包含率只作参考列（00 #8、03 §4.6、F26）。"
+        },
+        "no_pierce": {
+          "$ref": "#/$defs/geoNoPierce",
+          "description": "贴身/宽松件：该区域静态穿出斑块数＝0（判据同 inside，但不报包含率参考）；Delete 顶点单独报。"
+        },
+        "no_poke": {
+          "$ref": "#/$defs/geoNoPoke",
+          "description": "姿势中不穿出（03 §8.2 T-28b）：在 pose_plan 配给该件的每个 (姿势, PB 模式) 帧上，pose_induced 斑块（顶点 d_pose > τ 且 d_base ≤ τ/2，对 stand_still 差分）连通面积 ≥ min_area_cm2 的数＝0；static_grown 与 opening_deep 只 advisory；PB 两模式按解释表（✗/✓ pb_dependent 信息，✗/✗、✓/✗ 违例）。E14 通过前 advisory。"
+        },
+        "opening_intact": {
+          "$ref": "#/$defs/geoOpening",
+          "description": "设计开口完好：开口区域不被收缩键内收或被 Delete（R6『缩过头』）。"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "inside"
+          ]
+        },
+        {
+          "required": [
+            "no_pierce"
+          ]
+        },
+        {
+          "required": [
+            "no_poke"
+          ]
+        },
+        {
+          "required": [
+            "opening_intact"
+          ]
+        }
+      ],
+      "dependentSchemas": {
+        "inside": {
+          "properties": {
+            "no_pierce": {
+              "description": "geo 只能写一种度量",
+              "not": {}
+            },
+            "no_poke": {
+              "description": "geo 只能写一种度量",
+              "not": {}
+            },
+            "opening_intact": {
+              "description": "geo 只能写一种度量",
+              "not": {}
+            }
+          }
+        },
+        "no_pierce": {
+          "properties": {
+            "no_poke": {
+              "description": "geo 只能写一种度量",
+              "not": {}
+            },
+            "opening_intact": {
+              "description": "geo 只能写一种度量",
+              "not": {}
+            }
+          }
+        },
+        "no_poke": {
+          "properties": {
+            "opening_intact": {
+              "description": "geo 只能写一种度量",
+              "not": {}
+            }
+          }
+        }
+      }
+    },
+    "grab": {
+      "type": "object",
+      "description": "抓屏期望（U4 的逐件版，01 §8）：目标部件（或其 submesh 材质槽）上可见的具名 GrabPass 材质。",
+      "additionalProperties": false,
+      "properties": {
+        "point_min": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5000,
+          "description": "该件抓屏材质的渲染队列须 ≥ 此值；不写取 render.grab_point_min（缺省 3050）。"
+        },
+        "hidden_behind_max": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "队列在该件抓取点之后、因此透过它看不见的非抓屏可见材质数上限（缺省 0）。"
+        }
+      },
+      "minProperties": 1
+    },
+    "variantOption": {
+      "type": "object",
+      "description": "变体选项：条件成立时，变体组里可见的件只能是 use（use 自己可见与否不管——外套关着不算违例）。",
+      "additionalProperties": false,
+      "properties": {
+        "when": {
+          "$ref": "#/$defs/cond",
+          "description": "选用条件（一般是 body.<轴> 区间）；多个选项的条件同时成立时取第一个。"
+        },
+        "use": {
+          "$ref": "#/$defs/partId",
+          "description": "该条件下唯一允许可见的件（目标部件或其 alt_of 备选件）。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        }
+      },
+      "required": [
+        "when",
+        "use"
+      ]
+    },
+    "sync": {
+      "type": "object",
+      "description": "目标键跟随源键（衣物跟身体）：target＝clamp(scale×source＋offset, 0, 100)，或按 map 分段线性插值（两端外按端点值）。",
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/meshKey",
+          "description": "源（一般是身体键）。"
+        },
+        "tol": {
+          "type": "number",
+          "minimum": 0,
+          "description": "允差，缺省 0.5。"
+        },
+        "scale": {
+          "type": "number",
+          "description": "线性系数，缺省 1。"
+        },
+        "offset": {
+          "type": "number",
+          "description": "线性偏移（权重单位），缺省 0。"
+        },
+        "map": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          },
+          "description": "分段线性映射点 [[源, 目标], …]（≥2 点，源严格升序，SEM-13）；与 scale/offset 互斥。"
+        }
+      },
+      "required": [
+        "from"
+      ],
+      "dependentSchemas": {
+        "scale": {
+          "properties": {
+            "map": {
+              "description": "map 与 scale/offset 互斥",
+              "not": {}
+            }
+          }
+        },
+        "offset": {
+          "properties": {
+            "map": {
+              "description": "map 与 scale/offset 互斥",
+              "not": {}
+            }
+          }
+        }
+      }
+    },
+    "expectation": {
+      "type": "object",
+      "description": "期望（对 target 在某状态下应满足的判据）。恰好一种主形式：value｜range｜values｜not_written｜sync｜hidden｜shown｜deleted｜variant｜geo｜grab｜no_writer_other_than｜pending，或单独的 class；class 可与 value/range/values 叠加；tol 只随 value/values。多种主形式同写时只在规范顺序（即前句顺序）靠后的那个字段上报。",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "精确权重（0–100），允差 tol。"
+        },
+        "tol": {
+          "type": "number",
+          "minimum": 0,
+          "description": "value/values 的允差，缺省 0.5（03 §4.6：clip 常量切线、档位精确 i/n）。"
+        },
+        "range": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "description": "权重落在闭区间 [lo, hi]（0–100，lo ≤ hi）。"
+        },
+        "values": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^(?!(AAO_Merged_|\\$\\$AAO_))[^\\n\\r]+$"
+          },
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "description": "逐键精确值 {键名: 权重}（取代 03a 的 keys 映射＋as_listed）；target 不得再带 key/keys。"
+        },
+        "class": {
+          "type": "string",
+          "enum": [
+            "pose",
+            "shrink",
+            "body",
+            "face",
+            "nail",
+            "delete_target"
+          ],
+          "description": "键的实测位移类别须为此类（03a Q1-⑤ 分类规则，E5 标定前判不了记 undecidable）：pose 姿态｜shrink 收缩｜body 体型｜face 捏脸｜nail 甲｜delete_target 删除靶键。"
+        },
+        "not_written": {
+          "const": true,
+          "description": "该状态下没有任何写者改它（值＝网格序列化默认）。"
+        },
+        "sync": {
+          "$ref": "#/$defs/sync",
+          "description": "目标键跟随源键（衣物跟身体）：target＝clamp(scale×source＋offset, 0, 100)，或按 map 分段线性插值（两端外按端点值）。"
+        },
+        "hidden": {
+          "const": true,
+          "description": "目标部件合成可见性为假。"
+        },
+        "shown": {
+          "const": true,
+          "description": "目标部件合成可见性为真。"
+        },
+        "deleted": {
+          "type": "object",
+          "description": "目标网格在该区域的顶点被 Delete（V4；T1 权重看不到，只能用几何/V4 验）。至少写 min_ratio 或 max_ratio。",
+          "additionalProperties": false,
+          "properties": {
+            "region": {
+              "$ref": "#/$defs/regionSet",
+              "description": "区域。"
+            },
+            "min_ratio": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "被删比例下限（0–1）。"
+            },
+            "max_ratio": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "被删比例上限（0–1）；写 0 表示『不应被删』。"
+            }
+          },
+          "required": [
+            "region"
+          ],
+          "anyOf": [
+            {
+              "required": [
+                "min_ratio"
+              ]
+            },
+            {
+              "required": [
+                "max_ratio"
+              ]
+            }
+          ]
+        },
+        "variant": {
+          "type": "object",
+          "description": "变体组（目标部件＋以它为 alt_of 的备选件）的显示约束（取代 03a 的 variant.by/of/options）。",
+          "additionalProperties": false,
+          "properties": {
+            "exclusive": {
+              "type": "boolean",
+              "description": "true＝组内任一状态至多一件可见。false 时必须写 options（否则是空期望）。"
+            },
+            "options": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "$ref": "#/$defs/variantOption"
+              },
+              "description": "按条件限定可见件（≥2 项）：第一个成立的选项 o 要求『组内可见件 ⊆ {o.use}』；都不成立不约束。"
+            }
+          },
+          "required": [
+            "exclusive"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "exclusive": {
+                    "const": false
+                  }
+                },
+                "required": [
+                  "exclusive"
+                ]
+              },
+              "then": {
+                "required": [
+                  "options"
+                ]
+              }
+            }
+          ]
+        },
+        "geo": {
+          "$ref": "#/$defs/geo",
+          "description": "几何度量（03 §4.6、§8.2）；恰好写一种。标定前只 advisory。"
+        },
+        "grab": {
+          "$ref": "#/$defs/grab",
+          "description": "抓屏期望（U4 的逐件版，01 §8）：目标部件（或其 submesh 材质槽）上可见的具名 GrabPass 材质。"
+        },
+        "no_writer_other_than": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/writer"
+          },
+          "description": "除列出的写者来源外，不得有写者在该状态改它（抓厂商滑块抢键）。"
+        },
+        "pending": {
+          "const": true,
+          "description": "期望待人判（取代 03a 的 flag）：校验器对该条一律出 undecidable 并附 dep.human；使用时 dep 必须带 human。"
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "value"
+          ]
+        },
+        {
+          "required": [
+            "range"
+          ]
+        },
+        {
+          "required": [
+            "values"
+          ]
+        },
+        {
+          "required": [
+            "not_written"
+          ]
+        },
+        {
+          "required": [
+            "sync"
+          ]
+        },
+        {
+          "required": [
+            "hidden"
+          ]
+        },
+        {
+          "required": [
+            "shown"
+          ]
+        },
+        {
+          "required": [
+            "deleted"
+          ]
+        },
+        {
+          "required": [
+            "variant"
+          ]
+        },
+        {
+          "required": [
+            "geo"
+          ]
+        },
+        {
+          "required": [
+            "grab"
+          ]
+        },
+        {
+          "required": [
+            "no_writer_other_than"
+          ]
+        },
+        {
+          "required": [
+            "pending"
+          ]
+        },
+        {
+          "required": [
+            "class"
+          ]
+        }
+      ],
+      "dependentSchemas": {
+        "value": {
+          "properties": {
+            "range": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "values": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "not_written": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "sync": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "hidden": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "shown": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "deleted": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "variant": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "geo": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "grab": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "no_writer_other_than": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "pending": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            }
+          }
+        },
+        "range": {
+          "properties": {
+            "values": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "not_written": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "sync": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "hidden": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "shown": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "deleted": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "variant": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "geo": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "grab": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "no_writer_other_than": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "pending": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            }
+          }
+        },
+        "values": {
+          "properties": {
+            "not_written": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "sync": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "hidden": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "shown": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "deleted": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "variant": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "geo": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "grab": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "no_writer_other_than": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "pending": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            }
+          }
+        },
+        "not_written": {
+          "properties": {
+            "sync": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "hidden": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "shown": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "deleted": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "variant": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "geo": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "grab": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "no_writer_other_than": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "pending": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "class": {
+              "description": "class 只能单独用或叠加在 value/range/values 上",
+              "not": {}
+            }
+          }
+        },
+        "sync": {
+          "properties": {
+            "hidden": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "shown": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "deleted": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "variant": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "geo": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "grab": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "no_writer_other_than": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "pending": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "class": {
+              "description": "class 只能单独用或叠加在 value/range/values 上",
+              "not": {}
+            }
+          }
+        },
+        "hidden": {
+          "properties": {
+            "shown": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "deleted": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "variant": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "geo": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "grab": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "no_writer_other_than": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "pending": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "class": {
+              "description": "class 只能单独用或叠加在 value/range/values 上",
+              "not": {}
+            }
+          }
+        },
+        "shown": {
+          "properties": {
+            "deleted": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "variant": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "geo": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "grab": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "no_writer_other_than": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "pending": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "class": {
+              "description": "class 只能单独用或叠加在 value/range/values 上",
+              "not": {}
+            }
+          }
+        },
+        "deleted": {
+          "properties": {
+            "variant": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "geo": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "grab": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "no_writer_other_than": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "pending": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "class": {
+              "description": "class 只能单独用或叠加在 value/range/values 上",
+              "not": {}
+            }
+          }
+        },
+        "variant": {
+          "properties": {
+            "geo": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "grab": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "no_writer_other_than": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "pending": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "class": {
+              "description": "class 只能单独用或叠加在 value/range/values 上",
+              "not": {}
+            }
+          }
+        },
+        "geo": {
+          "properties": {
+            "grab": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "no_writer_other_than": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "pending": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "class": {
+              "description": "class 只能单独用或叠加在 value/range/values 上",
+              "not": {}
+            }
+          }
+        },
+        "grab": {
+          "properties": {
+            "no_writer_other_than": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "pending": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "class": {
+              "description": "class 只能单独用或叠加在 value/range/values 上",
+              "not": {}
+            }
+          }
+        },
+        "no_writer_other_than": {
+          "properties": {
+            "pending": {
+              "description": "期望只能有一种主形式",
+              "not": {}
+            },
+            "class": {
+              "description": "class 只能单独用或叠加在 value/range/values 上",
+              "not": {}
+            }
+          }
+        },
+        "pending": {
+          "properties": {
+            "class": {
+              "description": "class 只能单独用或叠加在 value/range/values 上",
+              "not": {}
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "tol"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "value"
+                  ]
+                },
+                {
+                  "required": [
+                    "values"
+                  ]
+                }
+              ]
+            }
+          },
+          "then": {
+            "properties": {
+              "tol": {
+                "description": "tol 只随 value/values",
+                "not": {}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "outcome": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "baseline",
+            "dont_care"
+          ]
+        },
+        {
+          "$ref": "#/$defs/expectation"
+        }
+      ],
+      "description": "期望或简写：baseline＝键值等于素体档案 baseline（不是现场值），对 {part} 目标＝可见性等于期望可见性模型 E（CONDITION_GRAMMAR.md §2.2，菜单说该显示就显示）；dont_care＝不检查；对象＝完整期望。"
+    },
+    "case": {
+      "type": "object",
+      "description": "分支：条件成立时用该期望（取代 03a 的 rules / exceptions / shown_if）。",
+      "additionalProperties": false,
+      "properties": {
+        "when": {
+          "$ref": "#/$defs/cond",
+          "description": "分支条件。"
+        },
+        "expect": {
+          "$ref": "#/$defs/outcome",
+          "description": "该分支的期望。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        }
+      },
+      "required": [
+        "when",
+        "expect"
+      ]
+    },
+    "confidence": {
+      "type": "object",
+      "description": "置信度两栏（03 Q1★）。",
+      "additionalProperties": false,
+      "properties": {
+        "writer": {
+          "$ref": "#/$defs/level",
+          "description": "写者这一栏：声明的写者确实存在、位置对、条件对的把握。"
+        },
+        "correct": {
+          "$ref": "#/$defs/level",
+          "description": "对错这一栏：该期望符合设计意图的把握。厂商写者与 ours_legacy 一律 unknown，只能由几何结果、S4 说明书/展示图或人判抬高（须写 correct_basis）。"
+        },
+        "correct_basis": {
+          "type": "string",
+          "pattern": "^(几何|S4|人判)[ ：:]\\S",
+          "description": "抬高『对错』的依据，以 几何｜S4｜人判 开头。写者含 vendor_*/ours_legacy 且 correct ≠ unknown 时必填。"
+        }
+      },
+      "required": [
+        "writer",
+        "correct"
+      ]
+    },
+    "fragmentConfidence": {
+      "type": "object",
+      "description": "片段依赖的置信度：对错栏固定 unknown（片段只记厂商事实，设计意图在各单声明里抬高）。",
+      "additionalProperties": false,
+      "properties": {
+        "writer": {
+          "$ref": "#/$defs/level",
+          "description": "写者这一栏。"
+        },
+        "correct": {
+          "const": "unknown",
+          "description": "对错这一栏：片段里固定 unknown。"
+        }
+      },
+      "required": [
+        "writer",
+        "correct"
+      ]
+    },
+    "dep": {
+      "type": "object",
+      "description": "依赖声明（D1–D8、R 一条）。",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/partId",
+          "description": "依赖 id（全声明唯一；`geo.` 开头的 id 留给 geo_defaults 生成项，手写同 id 即覆盖）。"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "D1",
+            "D2",
+            "D3",
+            "D4a",
+            "D4b",
+            "D5",
+            "D6",
+            "D7",
+            "D8",
+            "R"
+          ],
+          "description": "依赖种类（01 §4）：D1 身体←衣物｜D2 脚←鞋｜D3 袜↔脚型、袜←鞋｜D4a 衣物←衣物（内层收缩）｜D4b 内衣↔下装｜D5 衣物←体型（同步/变体）｜D6 遮挡显隐｜D7 发型←外套/帽｜D8 姿势相关｜R 渲染/抓屏（01 §8、03 Q10：kind 扩展，配 expect.grab）。"
+        },
+        "when": {
+          "$ref": "#/$defs/cond",
+          "description": "生效条件，缺省 \"true\"。与 cases 同用时是总闸（为假走 else）；与 expect_by_leader 同用时必须含恰一个 chain(...)，且是顶层合取项（SEM-04）。"
+        },
+        "target": {
+          "$ref": "#/$defs/target",
+          "description": "期望作用的对象。形状：{part}＝部件本身（显隐/变体/几何/抓屏）；{part, submesh}＝该部件的某个材质槽（只配 grab）；{part, key|keys}＝该部件每个 smr 上的键；{mesh, key|keys}＝指定网格上的键；{mesh} 或 {part} 不带键＝配合 expect.values（键在 values 里）。"
+        },
+        "targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/target"
+          },
+          "description": "多个目标共用同一期望（如 Bust 同步的 20 条衣物路径）。与 target 二选一。"
+        },
+        "expect": {
+          "$ref": "#/$defs/outcome",
+          "description": "条件成立时的期望。与 cases / expect_by_leader 三选一。"
+        },
+        "cases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/case"
+          },
+          "description": "有序分支，取第一个成立的；都不成立走 else。与 expect / expect_by_leader 三选一。"
+        },
+        "expect_by_leader": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)*$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/outcome"
+          },
+          "description": "按优先级链的当前主导件给期望：`when` 的顶层合取项 chain(a,b,…) 取第一个可见成员为 leader，映射 leader→期望；没有 leader（成员都不可见）或 when 为假走 else。键集合必须恰好等于 chain 成员集合（SEM-04）。编译规则（03 乙2）：各 leader 取值不同一律走 clip 后端，按 leader 顺序排状态，不靠层级先后。键＝chain 成员（部件 id 或 any.<kind>）。"
+        },
+        "else": {
+          "$ref": "#/$defs/outcome",
+          "description": "条件不成立（或 cases 都不成立、或无 leader）时的期望。声明里缺省 baseline；片段里缺省 dont_care（片段只描述厂商写者在其条件下写什么）。同一键被多件、多整套写时，各 dep 的 else 用 dont_care，回基线交给 U3（否则 SEM-22 报冲突）。"
+        },
+        "writer": {
+          "$ref": "#/$defs/writerSet",
+          "description": "期望的写者来源（DepCompiler 只编译含 gen 的条目；校验器对全部写者核对）。"
+        },
+        "source": {
+          "$ref": "#/$defs/source",
+          "description": "来源（每条必填，T-03 验收）。"
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence",
+          "description": "置信度两栏（03 Q1★）。"
+        },
+        "human": {
+          "$ref": "#/$defs/human",
+          "description": "该依赖的人判项；expect 用 pending 时必填。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        },
+        "roundtrip": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[ \\t]*(?:\"[^\"\\n\\r]+\"|(?:(?!->)[^\\s:,\"→])+)[ \\t]*:[ \\t]*(?:#[0-9]+|\"[^\"\\n\\r]+\"|(?:(?!->)[^\\s:,\"→#])(?:(?!->)[^\\s:,\"→])*)(?:[ \\t]*(?:→|->)[ \\t]*(?:#[0-9]+|\"[^\"\\n\\r]+\"|(?:(?!->)[^\\s:,\"→#])(?:(?!->)[^\\s:,\"→])*))+[ \\t]*(?:,[ \\t]*(?:\"[^\"\\n\\r]+\"|(?:(?!->)[^\\s:,\"→])+)[ \\t]*:[ \\t]*(?:#[0-9]+|\"[^\"\\n\\r]+\"|(?:(?!->)[^\\s:,\"→#])(?:(?!->)[^\\s:,\"→])*)(?:[ \\t]*(?:→|->)[ \\t]*(?:#[0-9]+|\"[^\"\\n\\r]+\"|(?:(?!->)[^\\s:,\"→#])(?:(?!->)[^\\s:,\"→])*))+[ \\t]*)*$"
+          },
+          "description": "往返序列（覆盖 roundtrip_default；[]＝不跑）。语法见 CONDITION_GRAMMAR.md §4，如 \"A2_Coat:1→0→1\"、\"A2_Outfit:素体水手服→MMN→#0\"、'\"CERP Pose\":0→1'。片段里不许写（参数属于各单的菜单）。"
+        },
+        "supersedes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/partId"
+          },
+          "description": "本条取代的依赖 id（一般是片段引入的 `<as>.<局部 id>`，也可是 geo_defaults 生成项）：被取代者不进期望矩阵，只在 decl.json 里标 superseded_by（归因与勾选表显示）。用于单子声明对片段写明『以我为准』（SEM-22、SEM-24）。片段里不许写。"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "writer",
+        "source",
+        "confidence"
+      ],
+      "dependentSchemas": {
+        "target": {
+          "properties": {
+            "targets": {
+              "description": "target 与 targets 二选一",
+              "not": {}
+            }
+          }
+        },
+        "expect": {
+          "properties": {
+            "cases": {
+              "description": "expect / cases / expect_by_leader 三选一",
+              "not": {}
+            },
+            "expect_by_leader": {
+              "description": "expect / cases / expect_by_leader 三选一",
+              "not": {}
+            }
+          }
+        },
+        "cases": {
+          "properties": {
+            "expect_by_leader": {
+              "description": "expect / cases / expect_by_leader 三选一",
+              "not": {}
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "required": [
+                "target"
+              ]
+            },
+            {
+              "required": [
+                "targets"
+              ]
+            }
+          ]
+        },
+        {
+          "anyOf": [
+            {
+              "required": [
+                "expect"
+              ]
+            },
+            {
+              "required": [
+                "cases"
+              ]
+            },
+            {
+              "required": [
+                "expect_by_leader"
+              ]
+            }
+          ]
+        },
+        {
+          "if": {
+            "required": [
+              "expect_by_leader"
+            ]
+          },
+          "then": {
+            "required": [
+              "when"
+            ],
+            "properties": {
+              "when": {
+                "pattern": "chain\\("
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "expect"
+            ],
+            "properties": {
+              "expect": {
+                "type": "object",
+                "required": [
+                  "pending"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "human"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "writer",
+              "confidence"
+            ],
+            "properties": {
+              "writer": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "vendor_sc",
+                      "vendor_clip",
+                      "vendor_fx",
+                      "ours_legacy"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "contains": {
+                      "enum": [
+                        "vendor_sc",
+                        "vendor_clip",
+                        "vendor_fx",
+                        "ours_legacy"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "confidence": {
+                "properties": {
+                  "correct": {
+                    "enum": [
+                      "high",
+                      "mid",
+                      "low"
+                    ]
+                  }
+                },
+                "required": [
+                  "correct"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "confidence": {
+                "required": [
+                  "correct_basis"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "fragmentDep": {
+      "type": "object",
+      "description": "依赖声明（D1–D8、R 一条）。片段内版本：id 与部件引用用局部 id；写者只许厂商三类；对错栏固定 unknown；条件只许 vis/chain/pose/pose_tag/true/false 原子（SEM-03）。",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/localId",
+          "description": "依赖 id（全声明唯一；`geo.` 开头的 id 留给 geo_defaults 生成项，手写同 id 即覆盖）。"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "D1",
+            "D2",
+            "D3",
+            "D4a",
+            "D4b",
+            "D5",
+            "D6",
+            "D7",
+            "D8",
+            "R"
+          ],
+          "description": "依赖种类（01 §4）：D1 身体←衣物｜D2 脚←鞋｜D3 袜↔脚型、袜←鞋｜D4a 衣物←衣物（内层收缩）｜D4b 内衣↔下装｜D5 衣物←体型（同步/变体）｜D6 遮挡显隐｜D7 发型←外套/帽｜D8 姿势相关｜R 渲染/抓屏（01 §8、03 Q10：kind 扩展，配 expect.grab）。"
+        },
+        "when": {
+          "$ref": "#/$defs/cond",
+          "description": "生效条件，缺省 \"true\"。与 cases 同用时是总闸（为假走 else）；与 expect_by_leader 同用时必须含恰一个 chain(...)，且是顶层合取项（SEM-04）。"
+        },
+        "target": {
+          "$ref": "#/$defs/target",
+          "description": "期望作用的对象。形状：{part}＝部件本身（显隐/变体/几何/抓屏）；{part, submesh}＝该部件的某个材质槽（只配 grab）；{part, key|keys}＝该部件每个 smr 上的键；{mesh, key|keys}＝指定网格上的键；{mesh} 或 {part} 不带键＝配合 expect.values（键在 values 里）。"
+        },
+        "targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/target"
+          },
+          "description": "多个目标共用同一期望（如 Bust 同步的 20 条衣物路径）。与 target 二选一。"
+        },
+        "expect": {
+          "$ref": "#/$defs/outcome",
+          "description": "条件成立时的期望。与 cases / expect_by_leader 三选一。"
+        },
+        "cases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/case"
+          },
+          "description": "有序分支，取第一个成立的；都不成立走 else。与 expect / expect_by_leader 三选一。"
+        },
+        "expect_by_leader": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)*$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/outcome"
+          },
+          "description": "按优先级链的当前主导件给期望：`when` 的顶层合取项 chain(a,b,…) 取第一个可见成员为 leader，映射 leader→期望；没有 leader（成员都不可见）或 when 为假走 else。键集合必须恰好等于 chain 成员集合（SEM-04）。编译规则（03 乙2）：各 leader 取值不同一律走 clip 后端，按 leader 顺序排状态，不靠层级先后。键＝chain 成员（部件 id 或 any.<kind>）。"
+        },
+        "else": {
+          "$ref": "#/$defs/outcome",
+          "description": "条件不成立（或 cases 都不成立、或无 leader）时的期望。声明里缺省 baseline；片段里缺省 dont_care（片段只描述厂商写者在其条件下写什么）。同一键被多件、多整套写时，各 dep 的 else 用 dont_care，回基线交给 U3（否则 SEM-22 报冲突）。"
+        },
+        "writer": {
+          "$ref": "#/$defs/vendorWriterSet",
+          "description": "期望的写者来源（DepCompiler 只编译含 gen 的条目；校验器对全部写者核对）。"
+        },
+        "source": {
+          "$ref": "#/$defs/source",
+          "description": "来源（每条必填，T-03 验收）。"
+        },
+        "confidence": {
+          "$ref": "#/$defs/fragmentConfidence",
+          "description": "片段依赖的置信度：对错栏固定 unknown（片段只记厂商事实，设计意图在各单声明里抬高）。"
+        },
+        "human": {
+          "$ref": "#/$defs/human",
+          "description": "该依赖的人判项；expect 用 pending 时必填。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "writer",
+        "source",
+        "confidence"
+      ],
+      "dependentSchemas": {
+        "target": {
+          "properties": {
+            "targets": {
+              "description": "target 与 targets 二选一",
+              "not": {}
+            }
+          }
+        },
+        "expect": {
+          "properties": {
+            "cases": {
+              "description": "expect / cases / expect_by_leader 三选一",
+              "not": {}
+            },
+            "expect_by_leader": {
+              "description": "expect / cases / expect_by_leader 三选一",
+              "not": {}
+            }
+          }
+        },
+        "cases": {
+          "properties": {
+            "expect_by_leader": {
+              "description": "expect / cases / expect_by_leader 三选一",
+              "not": {}
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "required": [
+                "target"
+              ]
+            },
+            {
+              "required": [
+                "targets"
+              ]
+            }
+          ]
+        },
+        {
+          "anyOf": [
+            {
+              "required": [
+                "expect"
+              ]
+            },
+            {
+              "required": [
+                "cases"
+              ]
+            },
+            {
+              "required": [
+                "expect_by_leader"
+              ]
+            }
+          ]
+        },
+        {
+          "if": {
+            "required": [
+              "expect_by_leader"
+            ]
+          },
+          "then": {
+            "required": [
+              "when"
+            ],
+            "properties": {
+              "when": {
+                "pattern": "chain\\("
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "expect"
+            ],
+            "properties": {
+              "expect": {
+                "type": "object",
+                "required": [
+                  "pending"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "human"
+            ]
+          }
+        }
+      ]
+    },
+    "waiver": {
+      "type": "object",
+      "description": "豁免：绑定五元组 (dep 或 rule＋parts, states, limit, decl_hash, tool_version)，任一变化即失效（03 §4.5）；可再收窄到姿势与 PB 模式。只有『设计意图』类误报能进豁免。",
+      "additionalProperties": false,
+      "properties": {
+        "dep": {
+          "$ref": "#/$defs/partId",
+          "description": "被豁免的依赖 id（含 geo_defaults 生成项；不能是被 supersedes 取代的）。与 rule 二选一。"
+        },
+        "rule": {
+          "type": "string",
+          "enum": [
+            "U1",
+            "U2",
+            "U3",
+            "U4",
+            "U5",
+            "U6",
+            "U7"
+          ],
+          "description": "被豁免的通用规则（03 §4.1）：U1 静态穿出斑块｜U2 两件重合｜U3 无写者回基线｜U4 抓取点｜U5 权重越界｜U6 顶点数不变｜U7 PB 碰撞体覆盖。与 dep 二选一，必须配 parts。"
+        },
+        "parts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/partId"
+          },
+          "description": "rule 豁免作用的部件（U2 写成对的两件）；只随 rule。"
+        },
+        "states": {
+          "$ref": "#/$defs/cond",
+          "description": "状态集：满足此条件的可达状态（用条件而不是状态 id，状态 id 随请求变）。"
+        },
+        "pose": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/poseSel"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/poseSel"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          ],
+          "description": "只豁免这些姿势上的结果（姿势选择子或其列表）；不写＝与姿势无关或全部姿势。"
+        },
+        "pb_mode": {
+          "type": "string",
+          "enum": [
+            "rigid",
+            "settle"
+          ],
+          "description": "只豁免该 PB 模式的结果：rigid｜settle；不写＝两者。"
+        },
+        "limit": {
+          "type": "object",
+          "description": "指标界限：实测指标在界内（≤ max，或 ≥ min）时豁免生效，越界仍报违例。max 与 min 恰写一个。",
+          "additionalProperties": false,
+          "properties": {
+            "metric": {
+              "type": "string",
+              "enum": [
+                "value_abs_diff",
+                "visibility_mismatch",
+                "deleted_ratio_diff",
+                "overlap_ratio",
+                "poke.area_cm2",
+                "poke.max_depth_mm",
+                "opening.max_shrink_mm",
+                "grab.point_queue",
+                "grab.hidden_count"
+              ],
+              "description": "指标名：value_abs_diff 取值偏差｜visibility_mismatch 显隐不符(0/1)｜deleted_ratio_diff 删除比例偏差｜overlap_ratio 两件重合比例｜poke.area_cm2 穿出斑块面积（静态或姿势，按 dep/rule）｜poke.max_depth_mm 斑块最大深度｜opening.max_shrink_mm 开口内收｜grab.point_queue 抓取点队列（用 min）｜grab.hidden_count 抓取点后看不见的材质数。穿越计数与包含率只是参考列，不能豁免。"
+            },
+            "max": {
+              "type": "number",
+              "minimum": 0,
+              "description": "上限（含）。"
+            },
+            "min": {
+              "type": "number",
+              "minimum": 0,
+              "description": "下限（含），用于越小越坏的指标（grab.point_queue）。"
+            }
+          },
+          "required": [
+            "metric"
+          ],
+          "anyOf": [
+            {
+              "required": [
+                "max"
+              ]
+            },
+            {
+              "required": [
+                "min"
+              ]
+            }
+          ],
+          "dependentSchemas": {
+            "max": {
+              "properties": {
+                "min": {
+                  "description": "max 与 min 恰写一个",
+                  "not": {}
+                }
+              }
+            }
+          }
+        },
+        "decl_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "声明指纹 `sha256:<64位hex>`：对 decl.json 中该 dep 展开后的条目（rule 豁免则为 parts 各条目）＋它引用的部件条目做规范化 JSON（键排序、UTF-8、无空白）后取 sha256；一改即失效。"
+        },
+        "tool_version": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.\\-]+@[0-9a-f]{7,64}$",
+          "description": "判定工具版本 `<工具>@<源文件 hash 前缀>`（如 verdict.py@3f2a9c1，03 §4.4 ③ 版本戳）。"
+        },
+        "cause": {
+          "const": "design_intent",
+          "description": "误报原因类别：只允许 design_intent（设计意图）；工具问题修工具入回放库、阈值问题重标定，都不进豁免。"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "理由（设计意图一句话，附展示图/人判出处）。"
+        },
+        "by": {
+          "type": "string",
+          "minLength": 1,
+          "description": "谁批准（用户/客户）。"
+        },
+        "date": {
+          "$ref": "#/$defs/date",
+          "description": "批准日期。"
+        },
+        "note": {
+          "$ref": "#/$defs/note",
+          "description": "自由备注，不参与校验。"
+        }
+      },
+      "required": [
+        "states",
+        "limit",
+        "decl_hash",
+        "tool_version",
+        "cause",
+        "reason",
+        "by",
+        "date"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "dep"
+          ]
+        },
+        {
+          "required": [
+            "rule"
+          ]
+        }
+      ],
+      "dependentSchemas": {
+        "dep": {
+          "properties": {
+            "rule": {
+              "description": "dep 与 rule 二选一",
+              "not": {}
+            },
+            "parts": {
+              "description": "parts 只随 rule",
+              "not": {}
+            }
+          }
+        },
+        "rule": {
+          "if": {
+            "not": {
+              "required": [
+                "dep"
+              ]
+            }
+          },
+          "then": {
+            "required": [
+              "parts"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

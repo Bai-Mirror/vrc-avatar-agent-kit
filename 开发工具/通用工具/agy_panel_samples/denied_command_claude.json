@@ -1,0 +1,65 @@
+{
+ "conversation_id": "<redacted>",
+ "status": "SUCCESS",
+ "response": "<model reply redacted>",
+ "duration_seconds": 17.604690564,
+ "num_turns": 1,
+ "json_schema": {
+  "type": "object",
+  "properties": {
+   "claims": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string"
+      },
+      "verdict": {
+       "type": "string",
+       "enum": [
+        "成立",
+        "不成立",
+        "部分成立",
+        "看不出"
+       ]
+      },
+      "where": {
+       "type": "string",
+       "description": "图上具体位置（哪张图、哪一侧、大致坐标）"
+      },
+      "reason": {
+       "type": "string"
+      }
+     },
+     "required": [
+      "id",
+      "verdict",
+      "reason"
+     ]
+    }
+   },
+   "other_issues": {
+    "type": "string",
+    "description": "论断之外你看到的明显服装问题（没有就写 无）"
+   }
+  },
+  "required": [
+   "claims",
+   "other_issues"
+  ]
+ },
+ "usage": {
+  "input_tokens": 18701,
+  "output_tokens": 868,
+  "thinking_tokens": 0,
+  "cache_read_tokens": 32077,
+  "total_tokens": 19569
+ },
+ "denied_actions": [
+  {
+   "action": "command",
+   "display_name": "RunCommand"
+  }
+ ]
+}

@@ -1,0 +1,12 @@
+# 本机配置（从 kit.env.example 复制后填写），含本机路径，不提交
+kit.env
+# 凭据
+.credentials*
+*.key
+# 本机 Claude Code 配置（样例见 .claude/settings.example.json、.mcp.example.json）
+.claude/settings.local.json
+# Python / Node 缓存
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/

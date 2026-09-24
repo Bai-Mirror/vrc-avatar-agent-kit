@@ -1,0 +1,97 @@
+# verdict.py 阈值表（T-14 初版；T-18 用 E6/E14 数据回填分离度与来源样本）
+#
+# 规矩（03 §4.6）：每行必须有 单位 / 来源样本 / 达不到怎么办；
+# 几何项在 `advisory: true` 期间只报 advisory，不进卡口。
+schema: perception/thresholds/0.1
+tool: verdict.py
+version: 1
+
+value:                                   # 精确取值（D1/D3/D4/D5/D7 的 value/values/range）
+  tol: 0.5
+  unit: "形态键权重 0–100"
+  source: "03 §4.6：clip 是常量切线、档位精确 i/n，故 ±0.5"
+  fallback: "超差即 violation；有 writers.json 时归因到该 (mesh,key) 的写者集合，没有则 writer_blamed=null 并标 low"
+
+baseline:                                # else/expect = baseline 的兜底
+  tol: 0.5
+  unit: "形态键权重 0–100"
+  source: "素体档案 Kaguya.yaml baseline.client / neutral_foot；档案缺的键按 0"
+  fallback: "档案缺席时按 0 判并记 no_data 提示（当前只支持一份档案）"
+
+sync:                                    # expect.sync（衣物跟身体）
+  tol: 0.5
+  unit: "形态键权重 0–100"
+  source: "03 §4.6 同 value；scale 缺省 1、offset 缺省 0"
+  fallback: "源键解析不上 → no_data；不做 clamp 之外的推断"
+
+U1:                                      # 静态穿出斑块（T-28a，geo_*.json）
+  metric: poke.area_cm2
+  min_area_cm2: 0.5
+  max_depth_mm_torso: 2.0
+  max_depth_mm_limb: 3.0
+  advisory: true
+  separation: null
+  unit: "cm² / mm"
+  source: "03 §4.6/§8.2 T-28a；深度初值沿用 v2，标定见 T-08 第 6 日 Play（先量后定）"
+  fallback: "geo_*.json 缺席 → no_data；advisory 期间只报不进卡口"
+
+U2:                                      # 两件同时可见衣物重合
+  metric: overlap_ratio
+  max: 0.5
+  separation: null
+  unit: "比例 0–1"
+  source: "03 §4.6（外套双层实测 70% = 当前唯一正样本）"
+  fallback: "coincident 探针缺席 → no_data；max 只作 advisory 直到 ≥3 样本"
+
+U3:                                      # 收缩/姿态键在全部写者宿主不可见时应回基线
+  metric: value_abs_diff
+  tol: 0.5
+  unit: "形态键权重 0–100"
+  source: "03 §4.1 U3；宿主集合来自 writers.json（T-11）"
+  fallback: "writers.json 缺席 → no_data（不猜宿主）"
+
+U4:                                      # 抓屏链
+  metric: grab.hidden_count
+  hidden_max: 0
+  point_min: 3050
+  point_warn_below: 3000
+  unit: "渲染队列 / 材质槽条数"
+  source: "03 §4.1 U4、审查 docs/probes.md §3.2.1；工程A 头饰 2450→3050 是正样本"
+  fallback: "没有抓屏材质（grab_point_queue=null）→ 不适用、跳过；探针缺席 → no_data"
+
+U5:                                      # 权重越界
+  min: 0
+  max: 100
+  unit: "形态键权重"
+  source: "03 §4.1 U5；客户端钳 0–100、编辑器不钳"
+  fallback: "range 探针缺席 → 逐状态扫 blendshapes 兜底（同一判据）"
+
+U6:                                      # 同网格顶点数跨状态不变
+  metric: vertex_count_diff
+  unit: "顶点数"
+  source: "03 §4.1 U6；需 T1 v4 键存在表 / V4 桶"
+  fallback: "状态文件里没有顶点数 → no_data；V4/Delete 解释的差异不算违例"
+
+U7:                                      # PB 覆盖（归因线索）
+  rule: pb_no_collider
+  advisory: true
+  unit: "条"
+  source: "03 §4.1 U7/§8.3；只作归因线索，不单独判违例"
+  fallback: "pb.json 缺席 → no_data"
+
+U_KF:                                    # 同名键失配（件带身体同名键、件可见时件值 ≠ 身体值）
+  metric: value_abs_diff
+  mismatch_tol: 5.0
+  unit: "形态键权重 0–100"
+  source: "任务 AO 规格；AM key_follow 候选 × T1 实测（|差|>5 记失配）"
+  fallback: "候选清单缺席 → no_data；件/键名解析不上 → unmatched（不猜）；AM 的 key_follow_verdict.py 出现后优先调用它"
+
+sentinels:                               # 03 §4.4①：整批作废的哨兵（T1 请求级，verdict 只读状态头）
+  required: true
+  source: "03 §4.4①；本次 t1_full_probes 头部无 sentinels 字段，selftest 按 no_data 列出"
+  fallback: "哨兵缺席 → 报告里单列，不假装通过"
+
+coverage:                                # 判定覆盖率
+  min: null
+  source: "03 §4.5 判定覆盖率 = 已判/(已判+判不了)，下限 P9 待拍板"
+  fallback: "null = 只打印不判"

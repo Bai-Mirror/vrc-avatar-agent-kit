@@ -1,0 +1,44 @@
+#!/bin/bash
+# 工作区 git 兜底闸口：拦 > 5 MB 的文件、疑似密钥（内容）与凭据类文件名。正常提交请走 开发工具/通用工具/ws_git.py commit。
+# 安装：git config core.hooksPath 开发工具/通用工具/git-hooks
+# 例外（2026-09-22）：工程主场景 <工程>/Assets/_Work/<名>.unity 上限放宽到 32 MB ——
+#   09-22 工程B 主场景 6.28 MB 被 5 MB 线误判排除（SOP 04:62「单独处理，别整体调线」）。
+#   超过 32 MB 的主场景仍拦；其它文件仍按 5 MB。
+# 密钥扫描看的是**暂存区内容**（git show :路径），不是工作区文件；只报文件名与类别，不回显命中的串。
+LIMIT=$((5*1024*1024)); SCENE_LIMIT=$((32*1024*1024)); bad=0
+SCENE_RE='^[^/]+/Assets/_Work/[^/]+\.unity$'
+# 类别|正则（grep -E）。sk- 前要求非字母数字，免得 task-… 之类误中。
+KEY_PATTERNS=(
+  'sk- 类 API 密钥|(^|[^A-Za-z0-9])sk-[A-Za-z0-9_-]{32,}'
+  'Google API key|AIza[0-9A-Za-z_-]{35}'
+  'GitHub token|gh[pousr]_[A-Za-z0-9]{36}'
+  'GitHub fine-grained token|github_pat_[A-Za-z0-9_]{22,}'
+  'AWS access key id|AKIA[0-9A-Z]{16}'
+  'Slack token|xox[bp]-[A-Za-z0-9-]{10,}'
+  'PEM 私钥|-----BEGIN ([A-Z0-9]+ )*PRIVATE KEY-----'
+)
+while IFS= read -r -d '' f; do
+  base=${f##*/}
+  case "$base" in
+    .credentials*|*.key|kit.env)
+      echo "⛔ 凭据/本机配置文件不许提交：$f（kit.env 只提交 kit.env.example）" >&2; bad=1; continue;;
+  esac
+  [ -f "$f" ] || continue
+  lim=$LIMIT
+  if [[ $f =~ $SCENE_RE ]]; then lim=$SCENE_LIMIT; fi
+  s=$(stat -c %s -- "$f")
+  if [ "$s" -gt "$lim" ]; then
+    if [ "$lim" = "$SCENE_LIMIT" ]; then
+      echo "⛔ 主场景超过 32 MB：$f（$s B）—— 单独处理，别整体调线（SOP 04:62）" >&2
+    else
+      echo "⛔ 超过 5 MB：$f（$s B）—— 用 ws_git.py commit，它会自动排除" >&2
+    fi
+    bad=1; continue
+  fi
+  for kp in "${KEY_PATTERNS[@]}"; do
+    if git show ":$f" 2>/dev/null | grep -aqE -- "${kp#*|}"; then
+      echo "⛔ 疑似密钥（${kp%%|*}）：$f" >&2; bad=1; break
+    fi
+  done
+done < <(git diff --cached --name-only -z --diff-filter=ACMR)
+exit $bad

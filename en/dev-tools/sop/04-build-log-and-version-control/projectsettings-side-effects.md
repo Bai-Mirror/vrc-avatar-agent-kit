@@ -1,0 +1,13 @@
+> 🌐 English translation · [中文原文](../../../../开发工具/SOP/04_施工记录与版本管理/ProjectSettings副作用.md)
+
+> ← [04 · Work log and version control](../04-build-log-and-version-control.md)
+
+# ProjectSettings side effects (moved down from the 04 main page, 2026-09-23)
+
+### Graphics API and lilToonSetting.json (trigger: when `git status` shows changes under `ProjectSettings/`)
+
+- **`ProjectSettings/lilToonSetting.json` being rewritten along with the graphics API is by design, not corruption.** Whenever the API recorded in `CurrentRP.txt` differs from the current one, lilToon's startup hook rewrites the json and recompiles the `.shader` according to the avatar's materials; measured: in the OpenGL→Vulkan switch, those 30 `LIL_FEATURE_*` went from false→true, all of them texture feature switches "not referenced by any material", and **they don't go into the upload package** (upload goes through `IVRCSDKBuildRequestedCallback`, which recomputes from the actual materials). Source: `派工/B_结论.md`.
+  - **Trade-off**: this entry is only for explaining the diff, not for "fixing a wrong config". **The asymmetric cost is on the side of mixing APIs**: one API switch = a full lilToon shader reimport (tens of seconds) + inconsistent review conventions — so use a single graphics API throughout; choose Vulkan on the basis of "closer to what VRChat runs live"; for pure recoloring/static-look checks OpenGL is fine too, but **don't compare across the two**.
+- **Play changes project settings; check `git diff ProjectSettings/` before committing**: entering Play with AAO/SDK sets `legacyClampBlendShapeWeights` to 1 (the Play convention, consistent with the client), and a normal exit sets it back to 0 — these are side effects, not changes; after the session, restore with `git checkout <基线提交> -- <工程>/ProjectSettings/ProjectSettings.asset` (see [B850_Linux environment](../02-environment-and-manual-intervention/b850-linux-environment.md) for details).
+  - **Inference, pending falsification (E-未核-08)**: if the editor is force-killed during Play (`EnteredEditMode` never runs), `legacyClamp` may **leave `1` on disk**. **Until confirmed, use it only as a working hypothesis**: before entering Play next time, read `ProjectSettings.asset` once with `grep -n legacyClampBlendShapeWeights`, and restore it if you see 1; don't use this to assert "extrapolation is always clamped".
+  - **Trigger moment**: before touching 7z / archives. **Re-pack the 7z after fixing dependencies** — on 09-01 the historical `file:`/`git#master` dependencies of 7 projects were fixed, but `个人存档/*.7z` on the server was never re-packed (pointed out by G; to-do E-存档-02)

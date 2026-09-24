@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "UnityMCP": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "mcpforunityserver==10.1.2",
+        "mcp-for-unity",
+        "--transport",
+        "stdio"
+      ],
+      "env": {}
+    },
+    "agy": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "./开发工具/通用工具/agy_mcp_server.js"
+      ],
+      "env": {}
+    },
+    "Blender": {
+      "type": "stdio",
+      "command": "blender-mcp",
+      "args": [
+        "--transport",
+        "stdio"
+      ],
+      "env": {}
+    }
+  }
+}
